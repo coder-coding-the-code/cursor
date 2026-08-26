@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ECS Guardian Trust · Agent Trust Graph</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">GT</div>
+      <div>
+        <strong>Guardian Trust</strong>
+        <span>Agent Trust Graph</span>
+      </div>
+    </div>
+    <nav>
+      <button data-view="overview" class="active">态势总览</button>
+      <button data-view="graph">信任图</button>
+      <button data-view="check">授权检查</button>
+      <button data-view="guard">Action Guard</button>
+      <button data-view="findings">风险发现</button>
+      <button data-view="identities">身份注册表</button>
+      <button data-view="audit">审计账本</button>
+    </nav>
+    <p class="footnote">对齐 ECS Security · Guardian Trust<br/>NIST SP 800-207 / OpenFGA ReBAC</p>
+  </aside>
+  <main>
+    <header class="top">
+      <h1 id="title">态势总览</h1>
+      <div class="top-actions">
+        <span id="clock"></span>
+        <button id="reseed">重置示例数据</button>
+      </div>
+    </header>
+
+    <section id="view-overview" class="view">
+      <div class="cards" id="overview-cards"></div>
+      <div class="grid-2">
+        <article class="panel">
+          <h2>风险摘要</h2>
+          <div id="risk-bars"></div>
+        </article>
+        <article class="panel">
+          <h2>保护对象</h2>
+          <ul class="legend">
+            <li><i class="dot human"></i>Human Owner（Org–Person–Role）</li>
+            <li><i class="dot agent"></i>Agent（Companion / Task / NSEAP）</li>
+            <li><i class="dot sp"></i>Service Principal</li>
+            <li><i class="dot resource"></i>企业资源（ERP / MES / SCADA）</li>
+            <li><i class="dot connector"></i>Connector</li>
+            <li><i class="dot skill"></i>Skill</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-graph" class="view hidden">
+      <div class="toolbar">
+        <label>高亮节点
+          <select id="focus-node"></select>
+        </label>
+        <button id="fit-graph">适应画布</button>
+        <span class="hint">拖拽节点 · 滚轮缩放 · 点击查看路径</span>
+      </div>
+      <div id="network"></div>
+      <pre id="node-detail" class="detail">点击节点查看身份与信任边</pre>
+    </section>
+
+    <section id="view-check" class="view hidden">
+      <article class="panel">
+        <h2>Trust Check（ReBAC）</h2>
+        <form id="check-form" class="form">
+          <label>主体 Agent
+            <select name="subject_id" id="check-subject"></select>
+          </label>
+          <label>关系
+            <select name="relation">
+              <option value="can_access">can_access</option>
+              <option value="can_execute">can_execute</option>
+              <option value="owns">owns</option>
+              <option value="delegates_to">delegates_to</option>
+              <option value="trusts">trusts</option>
+            </select>
+          </label>
+          <label>对象
+            <select name="object_id" id="check-object"></select>
+          </label>
+          <label>动作
+            <input name="action" value="read" />
+          </label>
+          <button type="submit">执行检查</button>
+        </form>
+        <pre id="check-result" class="detail"></pre>
+      </article>
+      <article class="panel">
+        <h2>信任路径 / 爆炸半径</h2>
+        <form id="path-form" class="form">
+          <label>从
+            <select id="path-from"></select>
+          </label>
+          <label>到
+            <select id="path-to"></select>
+          </label>
+          <button type="submit">查找路径</button>
+          <button type="button" id="blast-btn">计算爆炸半径</button>
+        </form>
+        <pre id="path-result" class="detail"></pre>
+      </article>
+    </section>
+
+    <section id="view-guard" class="view hidden">
+      <article class="panel">
+        <h2>动作计划评估</h2>
+        <p class="hint">LLM 提出的 Action Plan 必须穿过符号化校验 → 身份权限 → 策略 → 风险定级 → 审批。</p>
+        <form id="guard-form" class="form">
+          <label>Agent
+            <select name="agent_id" id="guard-agent"></select>
+          </label>
+          <label>Skill
+            <select name="skill_id" id="guard-skill"></select>
+          </label>
+          <label>资源
+            <select name="resource_id" id="guard-resource"></select>
+          </label>
+          <label>动作
+            <input name="action" value="read" />
+          </label>
+          <label>提议者
+            <select name="proposed_by">
+              <option value="llm">llm</option>
+              <option value="human">human</option>
+              <option value="deterministic">deterministic</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" name="dry_run" /> Dry Run</label>
+          <button type="submit">评估</button>
+        </form>
+        <pre id="guard-result" class="detail"></pre>
+      </article>
+      <article class="panel">
+        <h2>待审批动作</h2>
+        <div id="plans"></div>
+      </article>
+    </section>
+
+    <section id="view-findings" class="view hidden">
+      <div id="findings"></div>
+    </section>
+
+    <section id="view-identities" class="view hidden">
+      <div class="tabs">
+        <button data-tab="humans" class="active">Human Owner</button>
+        <button data-tab="agents">Agents</button>
+        <button data-tab="sps">Service Principal</button>
+        <button data-tab="resources">Resources</button>
+      </div>
+      <div id="identity-table"></div>
+    </section>
+
+    <section id="view-audit" class="view hidden">
+      <div id="audit-table"></div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
