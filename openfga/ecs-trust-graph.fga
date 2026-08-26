@@ -1,0 +1,62 @@
+model
+  schema 1.1
+
+# ECS Guardian Trust — Agent Trust Graph
+# 对齐文档：Agent-Human / Agent-Agent / Agent-Resource 信任关系
+# 生产环境可将本模型加载到 OpenFGA（CNCF），由本仓库引擎同步 tuple。
+
+type organization
+  relations
+    define admin: [user]
+    define member: [user, agent]
+    define security_officer: [user]
+
+type user
+  relations
+    define organization: [organization]
+    # Org-Person-Role 三元组中的角色绑定
+    define assigned_role: [role]
+
+type role
+
+# 智能体作为一等主体（OpenFGA "Agents as Principals" 模式）
+type agent
+  relations
+    define owner: [user]                          # Human Owner，生产环境强制
+    define organization: [organization]
+    define delegated_from: [agent]                # 委托来源，禁止信任升级
+    define trusts: [agent]
+    define service_principal: [service_principal]
+    define can_assume: service_principal
+    define accountable_to: owner or admin from organization
+
+type service_principal
+  relations
+    define bound_agent: [agent]
+    define owner: owner from bound_agent
+    define can_access: [resource]
+    define can_execute: [resource]
+
+type resource
+  relations
+    define organization: [organization]
+    define viewer: [user, agent, service_principal, agent#service_principal]
+    define operator: [service_principal]
+    define admin: [user]
+    define can_read: viewer or operator or admin or member from organization
+    define can_write: operator or admin
+    define can_execute: operator
+    define can_admin: admin or security_officer from organization
+
+type connector
+  relations
+    define target: [resource]
+    define used_by: [agent]
+    define can_invoke: used_by
+
+type skill
+  relations
+    define owner: [user, agent]
+    define invoker: [agent]
+    define required_resource: [resource]
+    define can_invoke: invoker or owner
