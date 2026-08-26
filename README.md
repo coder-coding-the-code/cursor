@@ -71,7 +71,14 @@ pytest
 | L4 | 双人审批 + 白名单 |
 | L5 | 确定性控制，禁止模型直接执行 |
 
-## API 摘要
+## API
+
+完整请求/响应、枚举与调用顺序见 **[docs/api.md](docs/api.md)**。服务启动后也可使用：
+
+- Swagger UI：http://127.0.0.1:8080/docs
+- ReDoc：http://127.0.0.1:8080/redoc
+
+常用接口：
 
 - `POST /api/v1/trust/check` — ReBAC 检查（含信任路径）
 - `GET /api/v1/trust/path` — Human/Agent 到资源的信任路径
