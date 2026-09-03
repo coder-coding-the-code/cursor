@@ -1,0 +1,9 @@
+services:
+  semantic-firewall:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      SEMANTIC_FW_SEED_ON_START: "true"
+    volumes:
+      - ./data:/app/data

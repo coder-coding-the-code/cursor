@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ECS Guardian Semantic · 语义防火墙</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">SF</div>
+      <div>
+        <strong>Guardian Semantic</strong>
+        <span>Semantic Firewall</span>
+      </div>
+    </div>
+    <nav>
+      <button data-view="overview" class="active">态势总览</button>
+      <button data-view="inspect">实时检测</button>
+      <button data-view="samples">攻击样本</button>
+      <button data-view="ontology">金本体</button>
+      <button data-view="tools">工具策略</button>
+      <button data-view="audit">审计账本</button>
+    </nav>
+    <p class="footnote">ECS Security · 3.6 语义管道漏洞过滤器<br/>每一条语义消息必须过墙</p>
+  </aside>
+  <main>
+    <header class="top">
+      <h1 id="title">态势总览</h1>
+      <div class="top-actions">
+        <span id="clock"></span>
+        <button id="reseed">重置示例数据</button>
+      </div>
+    </header>
+
+    <section id="view-overview" class="view">
+      <div class="cards" id="overview-cards"></div>
+      <div class="grid-2">
+        <article class="panel">
+          <h2>威胁类型分布</h2>
+          <div id="threat-bars"></div>
+        </article>
+        <article class="panel">
+          <h2>检测覆盖</h2>
+          <ul class="legend">
+            <li><i class="dot inj"></i>Prompt Injection 提示注入</li>
+            <li><i class="dot ont"></i>Ontology Poisoning 本体投毒</li>
+            <li><i class="dot str"></i>Malicious Structure 恶意结构</li>
+            <li><i class="dot jb"></i>Jailbreak 越狱</li>
+            <li><i class="dot hid"></i>Hidden Instruction 隐藏指令</li>
+            <li><i class="dot priv"></i>Privilege Escalation 权限提升</li>
+            <li><i class="dot obf"></i>Semantic Obfuscation 语义混淆</li>
+            <li><i class="dot tool"></i>Tool Abuse 工具滥用</li>
+          </ul>
+        </article>
+      </div>
+      <article class="panel">
+        <h2>最近裁决</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>时间</th><th>裁决</th><th>评分</th><th>通道</th><th>威胁</th><th>预览</th>
+              </tr>
+            </thead>
+            <tbody id="recent-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="view-inspect" class="view hidden">
+      <div class="grid-2 inspect-grid">
+        <article class="panel">
+          <h2>语义消息</h2>
+          <form id="inspect-form" class="form stacked">
+            <div class="row">
+              <label>通道
+                <select name="channel">
+                  <option value="user">user 用户</option>
+                  <option value="tool_result">tool_result 工具回传</option>
+                  <option value="rag">rag 检索</option>
+                  <option value="ontology">ontology 本体</option>
+                  <option value="skill_def">skill_def Skill 定义</option>
+                  <option value="memory">memory 记忆</option>
+                  <option value="agent_to_agent">agent_to_agent</option>
+                </select>
+              </label>
+              <label>信任等级
+                <select name="trust_level">
+                  <option>T0</option><option>T1</option>
+                  <option selected>T2</option>
+                  <option>T3</option><option>T4</option><option>T5</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label>Agent
+                <input name="agent_id" value="agent-companion-zhang" />
+              </label>
+              <label>Session
+                <input name="session_id" value="sess-demo" />
+              </label>
+            </div>
+            <label>内容
+              <textarea name="content" rows="8" placeholder="粘贴用户输入、工具输出、RAG 片段或本体增量…"></textarea>
+            </label>
+            <label>tool_calls JSON（可选）
+              <textarea name="tool_calls" rows="3" placeholder='[{"name":"mes_read","arguments":{"wo":"A-102"}}]'></textarea>
+            </label>
+            <label>ontology_delta / structured JSON（可选）
+              <textarea name="extra" rows="3" placeholder='{"ontology_delta":{"triples_add":[]}}'></textarea>
+            </label>
+            <label>允许工具（逗号分隔）
+              <input name="allowed_tools" value="mes_read,erp_read" />
+            </label>
+            <button type="submit">过墙检测</button>
+          </form>
+        </article>
+        <article class="panel" id="verdict-panel">
+          <h2>防火墙裁决</h2>
+          <div id="verdict-empty" class="hint">提交一条语义消息后，这里显示管道各阶段与命中规则。</div>
+          <div id="verdict-body" class="hidden"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-samples" class="view hidden">
+      <p class="hint">内置星河智造攻防样本。点击「运行」会走完整语义管道并写入审计账本。</p>
+      <div id="sample-grid" class="sample-grid"></div>
+    </section>
+
+    <section id="view-ontology" class="view hidden">
+      <article class="panel">
+        <h2>金本体公理（不可被对话改写）</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>subject</th><th>predicate</th><th>object</th><th>说明</th></tr></thead>
+            <tbody id="axiom-body"></tbody>
+          </table>
+        </div>
+      </article>
+      <article class="panel">
+        <h2>策略规则</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>规则</th><th>威胁</th><th>通道</th><th>最低严重度</th><th>效果</th></tr></thead>
+            <tbody id="policy-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="view-tools" class="view hidden">
+      <article class="panel">
+        <h2>工具风险与允许列表</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>工具</th><th>风险</th><th>最低信任</th><th>危险</th><th>说明</th></tr></thead>
+            <tbody id="tool-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="view-audit" class="view hidden">
+      <article class="panel">
+        <h2>审计账本</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>时间</th><th>事件</th><th>主体</th><th>裁决</th><th>详情</th></tr></thead>
+            <tbody id="audit-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
