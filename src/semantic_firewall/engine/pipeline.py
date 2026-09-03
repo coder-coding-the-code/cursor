@@ -157,7 +157,9 @@ def persist_verdict(db: Session, req: InspectRequest, verdict: InspectVerdict) -
             trust_level=req.trust_level.value,
         )
     )
-    persist_turn(db, req.session_id, verdict.message_id or "", req.content, canonicalize(req.content).folded)
+    # 拒绝/隔离从未进入模型上下文，不能再拿去污染后续轮次。
+    if verdict.effect in {DecisionEffect.ALLOW, DecisionEffect.SANITIZE}:
+        persist_turn(db, req.session_id, verdict.message_id or "", req.content, canonicalize(req.content).folded)
     db.add(
         AuditEvent(
             event_type="semantic.inspect",

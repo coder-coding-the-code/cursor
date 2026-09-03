@@ -27,10 +27,21 @@ def load_history(db: Session | None, session_id: str | None) -> list[str]:
     return list(reversed([r.canonical or r.content for r in rows]))
 
 
+def _complete_attack(req: InspectRequest, text: str) -> bool:
+    """单轮已经能被 YARA 定性的完整注入，不再当作碎片去拼接。"""
+    piece = canonicalize(text)
+    synthetic = req.model_copy(update={"content": text})
+    return bool(
+        PromptInjectionDetector().scan(synthetic, piece)
+        or JailbreakDetector().scan(synthetic, piece)
+    )
+
+
 def scan_chain(req: InspectRequest, canonical: CanonicalResult, history: list[str]) -> list[Finding]:
-    if not history:
+    fragments = [turn for turn in history if not _complete_attack(req, turn)]
+    if not fragments:
         return []
-    combined = " ".join([*history, canonical.folded])
+    combined = " ".join([*fragments, canonical.folded])
     stitched = canonicalize(combined)
     synthetic = req.model_copy(update={"content": combined})
     hits: list[Finding] = []
