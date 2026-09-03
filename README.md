@@ -28,7 +28,7 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
         │
         ▼
   0 Canonicalize     ftfy + Unicode TR39 同形字 + BeautifulSoup 隐藏信道
-  1 Sunglasses       本地提示词防火墙：注入 / 越狱 / 工具输出投毒（仍在维护）
+  1 NeMo Guardrails NVIDIA 官方 hf_classifier 本地后端（提示注入分类）
   2 Detectors        Vigil YARA overlay / rdflib / 工具与金本体策略（ECS 控制面）
   3 Session Chain    把拆开的多轮载荷拼回去再走同一组扫描器
   4 Score + PEP      allow | sanitize | quarantine | deny
@@ -45,8 +45,8 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
 
 | 能力 | 项目 | 许可证 |
 | --- | --- | --- |
-| 提示词注入 / 越狱 / 工具投毒 | [Sunglasses](https://github.com/sunglasses-dev/sunglasses) `SunglassesEngine`（PyPI 持续发版） | MIT |
-| 补充签名（中文/模板） | 自带 Vigil YARA 规则 + [yara-python](https://github.com/VirusTotal/yara-python) | Apache-2.0 / BSD |
+| 提示词注入分类 | [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) `hf_classifier` local（v0.24.0） | Apache-2.0 |
+| 补充签名（中文/模板） | Vigil YARA 规则 + [yara-python](https://github.com/VirusTotal/yara-python)（VirusTotal） | Apache-2.0 / BSD |
 | 文本修复 | [ftfy](https://github.com/rspeer/python-ftfy) | MIT |
 | 同形字 / 混脚本 | [confusable-homoglyphs](https://pypi.org/project/confusable-homoglyphs/)（Unicode TR39） | MIT |
 | HTML 隐藏注释 | [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/) + lxml | MIT |
@@ -56,7 +56,9 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
 | 校验 | Pydantic v2 | MIT |
 | 持久化 | SQLAlchemy + SQLite | MIT |
 
-提示词安全主扫描器是 [Sunglasses](https://github.com/sunglasses-dev/sunglasses)（MIT，本地、无网络调用；2026 年仍在发版）。**不使用**已归档的 Protect AI `llm-guard`（2026-07-09 只读）及其 Hugging Face 模型。NVIDIA NeMo Guardrails 仍在维护，但依赖 LLM/困惑度启发式，不适合本仓库这种「每条语义消息过墙」的同步检测。Vigil 运行时已停更，这里只 vendoring 其 Apache-2.0 YARA 签名作为中文/模板 overlay。
+提示词安全主扫描器是 [NVIDIA NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails)（NVIDIA 维护，Apache-2.0，当前 0.24.0）。通过官方 `LocalHFClassifierConfig` / `get_backend().classify()` 在进程内跑文本分类，不调用已归档的 Protect AI `llm-guard` 包，也不使用个人小项目。
+
+分类权重默认 `protectai/deberta-v3-base-prompt-injection-v2`（Microsoft DeBERTa-v3 骨架的公开 HuggingFace 模型，可用 `SEMANTIC_FW_NEMO_MODEL` 替换）。Meta LlamaFirewall / Prompt Guard 2 同样由大厂维护，但模型门控，默认环境无法拉取。NVIDIA `NemoGuard-JailbreakDetect` 面向越狱困惑度/嵌入分类，对「忽略之前的指令」这类注入召回不足，因此不用它做主检测。Vigil 运行时已停更，这里只 vendoring YARA 签名，引擎用 VirusTotal `yara-python`。
 
 ## 快速开始
 

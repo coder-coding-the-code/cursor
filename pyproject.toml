@@ -22,7 +22,9 @@ dependencies = [
   "lxml>=5.0.0",
   "detect-secrets>=1.5.0",
   "yara-python>=4.5.0",
-  "sunglasses>=0.5.3",
+  "nemoguardrails>=0.24.0",
+  "transformers>=4.35.0",
+  "torch>=2.2.0",
 ]
 
 [project.optional-dependencies]

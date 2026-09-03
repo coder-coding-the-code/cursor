@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     max_session_turns: int = 12
     max_structure_depth: int = 10
     max_payload_chars: int = 50_000
-    sunglasses_enabled: bool = True
+    nemo_enabled: bool = True
+    nemo_model: str = "protectai/deberta-v3-base-prompt-injection-v2"
+    nemo_threshold: float = 0.92
+    nemo_blocked_labels: list[str] = ["INJECTION"]
 
 
 def data_dir() -> Path:

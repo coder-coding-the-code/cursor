@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from semantic_firewall.config import settings
 from semantic_firewall.engine.canonicalize import canonicalize
 from semantic_firewall.engine.detectors import DEFAULT_DETECTORS
-from semantic_firewall.engine.sunglasses_adapter import SunglassesDetector
+from semantic_firewall.engine.nemo_adapter import NemoGuardrailsDetector
 from semantic_firewall.engine.policy import decide
 from semantic_firewall.engine.sanitize import sanitize
 from semantic_firewall.engine.scoring import fuse
@@ -40,15 +40,15 @@ def inspect_message(req: InspectRequest, db: Session | None = None) -> InspectVe
     )
 
     findings: list[Finding] = []
-    t_sg = time.perf_counter()
-    sg_hits = SunglassesDetector().scan(req, canonical)
-    findings.extend(sg_hits)
+    t_nemo = time.perf_counter()
+    nemo_hits = NemoGuardrailsDetector().scan(req, canonical)
+    findings.extend(nemo_hits)
     stages.append(
         StageTrace(
-            name="sunglasses",
-            status="hit" if sg_hits else "ok",
-            detail=f"findings={len(sg_hits)}",
-            elapsed_ms=_elapsed(t_sg),
+            name="nemo_guardrails",
+            status="hit" if nemo_hits else "ok",
+            detail=f"findings={len(nemo_hits)}",
+            elapsed_ms=_elapsed(t_nemo),
         )
     )
 
