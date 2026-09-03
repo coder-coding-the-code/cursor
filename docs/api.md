@@ -20,12 +20,12 @@ python -m semantic_firewall serve --host 0.0.0.0 --port 8080
 | 层 | 库 |
 | --- | --- |
 | 规范化 | `ftfy`、`confusable-homoglyphs`（Unicode TR39）、BeautifulSoup |
-| 提示词安全 | Protect AI `llm-guard`：`PromptInjection`（DeBERTa 分类器）+ `InvisibleText` + `Secrets` |
-| 补充签名 | Vigil YARA + `yara-python` |
+| 提示词安全 | [Sunglasses](https://github.com/sunglasses-dev/sunglasses) `SunglassesEngine`（本地、仍在维护） |
+| 补充签名 | Vigil YARA 规则（仅签名，不用停更的 Vigil 运行时）+ `yara-python` |
 | 本体 | `rdflib` 解析 SPARQL Update / JSON-LD |
 | 隐藏载荷 | `detect-secrets` |
 
-分类器阈值默认 `0.92`（与 llm-guard 一致），`SEMANTIC_FW_LLM_GUARD_THRESHOLD` 可覆盖。短于 16 字的隐藏片段不跑 PromptInjection。
+Protect AI `llm-guard` 已于 2026-07-09 归档，本仓库改用 Sunglasses。通道映射：`user`→`message`，`tool_result`→`tool_output`，`rag`→`web_content`，`memory`→`log_memory`。短于 16 字的隐藏片段不送进 Sunglasses。
 
 签名文件在 `src/semantic_firewall/signatures/`（含 Vigil Apache-2.0 归属）。
 
@@ -112,7 +112,7 @@ python -m semantic_firewall serve --host 0.0.0.0 --port 8080
 | `effect` | PEP 裁决 |
 | `score` | 0–1 noisy-OR 融合分 |
 | `findings[]` | 检测器命中（证据、置信度、修复建议） |
-| `stages[]` | canonicalize / llm_guard / detectors / session_chain / policy |
+| `stages[]` | canonicalize / sunglasses / detectors / session_chain / policy |
 | `sanitized_content` | 消毒或围栏后的文本 |
 | `blocked_tools` | 被阻断的工具名 |
 
