@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     max_session_turns: int = 12
     max_structure_depth: int = 10
     max_payload_chars: int = 50_000
+    llm_guard_enabled: bool = True
+    llm_guard_use_onnx: bool = True
+    # 对齐 llm-guard PromptInjection 默认（源码 0.92）；可用环境变量覆盖。
+    llm_guard_threshold: float = 0.92
 
 
 def data_dir() -> Path:

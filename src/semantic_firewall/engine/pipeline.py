@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from semantic_firewall.config import settings
 from semantic_firewall.engine.canonicalize import canonicalize
 from semantic_firewall.engine.detectors import DEFAULT_DETECTORS
+from semantic_firewall.engine.llm_guard_adapter import LLMGuardDetector
 from semantic_firewall.engine.policy import decide
 from semantic_firewall.engine.sanitize import sanitize
 from semantic_firewall.engine.scoring import fuse
@@ -39,6 +40,18 @@ def inspect_message(req: InspectRequest, db: Session | None = None) -> InspectVe
     )
 
     findings: list[Finding] = []
+    t_lg = time.perf_counter()
+    lg_hits = LLMGuardDetector().scan(req, canonical)
+    findings.extend(lg_hits)
+    stages.append(
+        StageTrace(
+            name="llm_guard",
+            status="hit" if lg_hits else "ok",
+            detail=f"findings={len(lg_hits)}",
+            elapsed_ms=_elapsed(t_lg),
+        )
+    )
+
     t1 = time.perf_counter()
     for detector in DEFAULT_DETECTORS:
         findings.extend(detector.scan(req, canonical))

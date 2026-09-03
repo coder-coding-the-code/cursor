@@ -28,10 +28,10 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
         │
         ▼
   0 Canonicalize     ftfy + Unicode TR39 同形字 + BeautifulSoup 隐藏信道
-  1 Detectors        Vigil/YARA + rdflib + detect-secrets + 工具/金本体策略
-  2 Session Chain    把拆开的多轮载荷拼回去再走同一组扫描器
-  3 Score (noisy-OR) 多信号融合
-  4 PEP              allow | sanitize | quarantine | deny
+  1 LLM Guard        Protect AI：PromptInjection 分类器 + InvisibleText + Secrets
+  2 Detectors        Vigil YARA / rdflib / 工具与金本体策略（ECS 控制面）
+  3 Session Chain    把拆开的多轮载荷拼回去再走同一组扫描器
+  4 Score + PEP      allow | sanitize | quarantine | deny
         │
         ▼
   审计账本 +（可选）消毒围栏 <untrusted_data>
@@ -45,7 +45,10 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
 
 | 能力 | 项目 | 许可证 |
 | --- | --- | --- |
-| 提示注入 / 越狱签名 | [Vigil](https://github.com/deadbits/vigil-llm) YARA + [yara-python](https://github.com/VirusTotal/yara-python) | Apache-2.0 / BSD |
+| 提示词注入 / 越狱分类 | [LLM Guard](https://github.com/protectai/llm-guard)（Protect AI）`PromptInjection` | Apache-2.0 |
+| 不可见字符 | LLM Guard `InvisibleText` | Apache-2.0 |
+| 提示中的密钥 | LLM Guard `Secrets` | Apache-2.0 |
+| 补充签名（中文/模板） | [Vigil](https://github.com/deadbits/vigil-llm) YARA + [yara-python](https://github.com/VirusTotal/yara-python) | Apache-2.0 / BSD |
 | 文本修复 | [ftfy](https://github.com/rspeer/python-ftfy) | MIT |
 | 同形字 / 混脚本 | [confusable-homoglyphs](https://pypi.org/project/confusable-homoglyphs/)（Unicode TR39） | MIT |
 | HTML 隐藏注释 | [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/) + lxml | MIT |
@@ -55,7 +58,7 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
 | 校验 | Pydantic v2 | MIT |
 | 持久化 | SQLAlchemy + SQLite | MIT |
 
-可选：生产可再叠 [LLM Guard](https://github.com/protectai/llm-guard) 的 `PromptInjection` 分类器（需 transformers/ONNX），本仓库默认不用 GPU 模型。
+默认 ONNX CPU，分类模型为 `protectai/deberta-v3-base-prompt-injection-v2`。阈值与上游一致（`0.92`，`SEMANTIC_FW_LLM_GUARD_THRESHOLD` 可改）。短于 16 字的 HTML 注释等隐藏片段不跑 PromptInjection，避免把 `<!-- note -->` 当成注入。生产可设 `SEMANTIC_FW_LLM_GUARD_USE_ONNX=false` 切到 PyTorch。
 
 ## 快速开始
 

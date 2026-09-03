@@ -9,6 +9,7 @@ from semantic_firewall.engine.canonicalize import CanonicalResult, canonicalize
 from semantic_firewall.engine.detectors.jailbreak import JailbreakDetector
 from semantic_firewall.engine.detectors.privilege_escalation import PrivilegeEscalationDetector
 from semantic_firewall.engine.detectors.prompt_injection import PromptInjectionDetector
+from semantic_firewall.engine.llm_guard_adapter import LLMGuardDetector
 from semantic_firewall.models import SessionTurn
 from semantic_firewall.schema import Finding, InspectRequest, Severity
 
@@ -33,7 +34,7 @@ def scan_chain(req: InspectRequest, canonical: CanonicalResult, history: list[st
     stitched = canonicalize(combined)
     synthetic = req.model_copy(update={"content": combined})
     hits: list[Finding] = []
-    for detector in (PromptInjectionDetector(), JailbreakDetector(), PrivilegeEscalationDetector()):
+    for detector in (LLMGuardDetector(), PromptInjectionDetector(), JailbreakDetector(), PrivilegeEscalationDetector()):
         for finding in detector.scan(synthetic, stitched):
             finding.tags = [*finding.tags, "session_chain"]
             finding.title = f"跨轮语义链：{finding.title}"
