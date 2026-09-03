@@ -1,4 +1,4 @@
-"""规范化层：把语义消息还原成可扫描形态，剥掉隐藏信道。"""
+"""规范化层：ftfy 修复 + Unicode TR39 同形字 + BeautifulSoup 抽隐藏信道。"""
 
 from __future__ import annotations
 
@@ -8,6 +8,10 @@ import html
 import re
 import unicodedata
 from dataclasses import dataclass, field
+
+import ftfy
+from bs4 import BeautifulSoup, Comment
+from confusable_homoglyphs import confusables
 
 ZERO_WIDTH = {
     "\u200b",
@@ -28,62 +32,6 @@ ZERO_WIDTH = {
 
 BIDI_MARKS = {chr(c) for c in list(range(0x202A, 0x202F)) + list(range(0x2066, 0x206A))}
 
-# 常见西里尔 / 希腊 / 全角同形字 → 拉丁
-HOMOGLYPHS = str.maketrans(
-    {
-        "а": "a",
-        "е": "e",
-        "о": "o",
-        "р": "p",
-        "с": "c",
-        "у": "y",
-        "х": "x",
-        "і": "i",
-        "ј": "j",
-        "ѕ": "s",
-        "ԁ": "d",
-        "ɡ": "g",
-        "Α": "A",
-        "Β": "B",
-        "Ε": "E",
-        "Η": "H",
-        "Ι": "I",
-        "Κ": "K",
-        "Μ": "M",
-        "Ν": "N",
-        "Ο": "O",
-        "Ρ": "P",
-        "Τ": "T",
-        "Χ": "X",
-        "Υ": "Y",
-        "α": "a",
-        "ο": "o",
-        "ρ": "p",
-        "τ": "t",
-        "ν": "v",
-        "Ａ": "A",
-        "Ｂ": "B",
-        "Ｃ": "C",
-        "Ｄ": "D",
-        "Ｅ": "E",
-        "Ｉ": "I",
-        "Ｏ": "O",
-        "Ｓ": "S",
-        "ａ": "a",
-        "ｅ": "e",
-        "ｉ": "i",
-        "ｏ": "o",
-        "ｓ": "s",
-        "０": "0",
-        "１": "1",
-        "３": "3",
-        "４": "4",
-        "５": "5",
-        "７": "7",
-        "８": "8",
-    }
-)
-
 LEET = str.maketrans(
     {
         "0": "o",
@@ -98,11 +46,9 @@ LEET = str.maketrans(
     }
 )
 
-TAG_RE = re.compile(r"[\U000E0000-\U000E007F]")
 SPACED_LETTERS = re.compile(r"(?:(?<=\b)|(?<=\s))(?:[A-Za-z]\s+){3,}[A-Za-z]\b")
 B64_RE = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{24,}={0,2}(?![A-Za-z0-9+/])")
 HEX_RE = re.compile(r"(?:\\x[0-9a-fA-F]{2}){8,}|\\u00[0-9a-fA-F]{2}(?:\\u00[0-9a-fA-F]{2}){7,}")
-HTML_COMMENT = re.compile(r"<!--([\s\S]*?)-->")
 MD_REF = re.compile(r"\[([^\]]+)\]:\s*<([^>]+)>")
 
 INSTRUCTION_HINTS = (
@@ -129,10 +75,25 @@ class CanonicalResult:
     bidi_count: int = 0
     homoglyph_count: int = 0
     tag_char_count: int = 0
+    dangerous_homoglyphs: bool = False
 
 
-def _count_homoglyphs(text: str) -> int:
-    return sum(1 for ch in text if ord(ch) in HOMOGLYPHS)
+def _html_comments(text: str) -> list[str]:
+    soup = BeautifulSoup(text, "lxml")
+    return [str(node).strip() for node in soup.find_all(string=lambda value: isinstance(value, Comment)) if str(node).strip()]
+
+
+def _map_homoglyphs(text: str) -> tuple[str, int]:
+    hits = confusables.is_confusable(text, greedy=True, preferred_aliases=["LATIN", "HAN"]) or []
+    if not hits:
+        return text, 0
+    mapped = text
+    for item in hits:
+        src = item["character"]
+        latin = next((h["c"] for h in item.get("homoglyphs", []) if str(h.get("n", "")).startswith("LATIN")), None)
+        if latin:
+            mapped = mapped.replace(src, latin)
+    return mapped, len(hits)
 
 
 def _strip_invisible(text: str) -> tuple[str, int, int, int]:
@@ -147,7 +108,6 @@ def _strip_invisible(text: str) -> tuple[str, int, int, int]:
             continue
         if "\U000E0000" <= ch <= "\U000E007F":
             tags += 1
-            # Unicode tag 字符：把 tag 还原成 ASCII 后单独收集
             out.append(chr(ord(ch) - 0xE0000))
             continue
         if unicodedata.category(ch) in {"Cf", "Cc"} and ch not in "\n\r\t":
@@ -176,8 +136,6 @@ def _try_b64(blob: str) -> str | None:
         decoded = raw.decode("utf-8")
     except UnicodeDecodeError:
         return None
-    if not decoded.isprintable() and "\n" not in decoded:
-        return None
     low = decoded.lower()
     if any(h in low or h in decoded for h in INSTRUCTION_HINTS):
         return decoded
@@ -186,17 +144,14 @@ def _try_b64(blob: str) -> str | None:
 
 def canonicalize(text: str) -> CanonicalResult:
     original = text or ""
-    nfkc = unicodedata.normalize("NFKC", original)
-    unescaped = html.unescape(nfkc)
+    repaired = ftfy.fix_text(original, normalization="NFKC")
+    unescaped = html.unescape(repaired)
     hidden: list[str] = []
     signals: list[str] = []
-    homoglyphs = _count_homoglyphs(original)
 
-    for match in HTML_COMMENT.finditer(unescaped):
-        body = match.group(1).strip()
-        if body:
-            hidden.append(body)
-            signals.append("html_comment")
+    for body in _html_comments(unescaped):
+        hidden.append(body)
+        signals.append("html_comment")
 
     for match in MD_REF.finditer(unescaped):
         hidden.append(f"{match.group(1)} -> {match.group(2)}")
@@ -223,9 +178,8 @@ def canonicalize(text: str) -> CanonicalResult:
             pass
 
     stripped, zw, bidi, tags = _strip_invisible(unescaped)
-    mapped = stripped.translate(HOMOGLYPHS)
-    if not homoglyphs:
-        homoglyphs = _count_homoglyphs(stripped)
+    mapped, homoglyphs = _map_homoglyphs(stripped)
+    dangerous = bool(confusables.is_dangerous(stripped, preferred_aliases=["LATIN", "HAN"]))
     folded = _collapse_spaced(mapped)
     folded = re.sub(r"[ \t]{2,}", " ", folded)
     leet = folded.translate(LEET)
@@ -236,7 +190,7 @@ def canonicalize(text: str) -> CanonicalResult:
         signals.append("bidi_override")
     if tags:
         signals.append("unicode_tags")
-    if homoglyphs:
+    if homoglyphs or dangerous:
         signals.append("homoglyphs")
 
     scan_text = "\n".join([folded, leet, *hidden]).strip()
@@ -250,4 +204,5 @@ def canonicalize(text: str) -> CanonicalResult:
         bidi_count=bidi,
         homoglyph_count=homoglyphs,
         tag_char_count=tags,
+        dangerous_homoglyphs=dangerous,
     )

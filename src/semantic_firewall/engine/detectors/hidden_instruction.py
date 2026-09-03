@@ -1,4 +1,4 @@
-"""隐藏指令：零宽、双向覆盖、HTML 注释、编码载荷、Unicode Tag。"""
+"""隐藏指令：BeautifulSoup 注释 + Unicode 隐写 + detect-secrets 高熵载荷。"""
 
 from __future__ import annotations
 
@@ -19,6 +19,19 @@ INSTRUCTION_HINTS = (
     "sudo",
     "admin",
 )
+
+
+def _secret_hits(line: str) -> list[str]:
+    try:
+        from detect_secrets.plugins.high_entropy_strings import Base64HighEntropyString
+    except ImportError:
+        return []
+    plugin = Base64HighEntropyString(limit=4.5)
+    try:
+        found = plugin.analyze_line(filename="semantic-prompt", line=line)
+    except Exception:
+        return []
+    return [str(item)[:160] for item in (found or [])]
 
 
 class HiddenInstructionDetector(Detector):
@@ -81,9 +94,23 @@ class HiddenInstructionDetector(Detector):
                         title="注释/编码中藏有指令",
                         evidence=payload[:240],
                         location="hidden",
-                        remediation="解码 HTML 注释、Base64、Markdown 引用后二次扫描",
-                        tags=["stego"],
+                        remediation="用 BeautifulSoup 抽取 HTML 注释后再二次扫描",
+                        tags=["stego", "beautifulsoup"],
                     )
                 )
+
+        for secret in _secret_hits(req.content)[:2]:
+            findings.append(
+                Finding(
+                    detector=self.name,
+                    threat_type=ThreatType.HIDDEN_INSTRUCTION,
+                    severity=Severity.MEDIUM,
+                    confidence=0.7,
+                    title="detect-secrets 发现高熵/编码载荷",
+                    evidence=secret,
+                    remediation="提示中的密钥与 Base64 指令应隔离",
+                    tags=["detect-secrets"],
+                )
+            )
 
         return findings

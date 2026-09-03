@@ -1,0 +1,7 @@
+YARA signatures in this directory:
+
+- vigil_*.yar are copied from Vigil (https://github.com/deadbits/vigil-llm),
+  Copyright 2023 Adam M. Swanda, Apache License 2.0.
+- ecs_overlay.yar is an ECS-domain extension (Chinese / industrial / privilege).
+
+See https://www.apache.org/licenses/LICENSE-2.0

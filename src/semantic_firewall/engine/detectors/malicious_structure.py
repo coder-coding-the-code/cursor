@@ -150,8 +150,8 @@ class MaliciousStructureDetector(Detector):
                     )
                 )
 
-        # 多态：结构字段里塞自然语言注入
-        from semantic_firewall.engine.detectors.prompt_injection import DIRECT_RE
+        # 多态：结构字段里塞自然语言注入（复用 YARA 签名）
+        from semantic_firewall.engine.yara_engine import match_threat, scan_yara
 
         def walk_str(obj: Any) -> list[str]:
             acc: list[str] = []
@@ -166,7 +166,7 @@ class MaliciousStructureDetector(Detector):
             return acc
 
         for s in walk_str(payload):
-            if any(cre.search(s) for cre in DIRECT_RE):
+            if any(match_threat(m).value == "prompt_injection" for m in scan_yara(s)):
                 findings.append(
                     Finding(
                         detector=self.name,

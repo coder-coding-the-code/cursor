@@ -15,6 +15,17 @@ python -m semantic_firewall serve --host 0.0.0.0 --port 8080
 
 启动默认写入星河智造示例（`SEMANTIC_FW_SEED_ON_START=false` 可关）。
 
+## 开源扫描器
+
+| 层 | 库 |
+| --- | --- |
+| 规范化 | `ftfy`、`confusable-homoglyphs`（Unicode TR39）、BeautifulSoup |
+| 提示注入 / 越狱 | Vigil YARA + `yara-python` |
+| 本体 | `rdflib` 解析 SPARQL Update / JSON-LD |
+| 隐藏载荷 | `detect-secrets` |
+
+签名文件在 `src/semantic_firewall/signatures/`（含 Vigil Apache-2.0 归属）。
+
 ---
 
 ## 1. 约定

@@ -27,9 +27,9 @@ Agent 的输入不只是用户打字。工具回传、RAG 片段、本体增量�
 Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
         │
         ▼
-  0 Canonicalize     NFKC / 同形字 / 零宽 / 解码隐藏信道
-  1 Detectors × 8    并行签名 + 结构 + 本体增量
-  2 Session Chain    把拆开的多轮载荷拼回去
+  0 Canonicalize     ftfy + Unicode TR39 同形字 + BeautifulSoup 隐藏信道
+  1 Detectors        Vigil/YARA + rdflib + detect-secrets + 工具/金本体策略
+  2 Session Chain    把拆开的多轮载荷拼回去再走同一组扫描器
   3 Score (noisy-OR) 多信号融合
   4 PEP              allow | sanitize | quarantine | deny
         │
@@ -41,14 +41,21 @@ Semantic Message (user | tool_result | rag | ontology | skill_def | memory)
 
 ## 开源技术栈
 
+检测器优先封装现成组件，不从零写规则引擎。PEP / 通道策略 / 金本体仍是 ECS 控制面。
+
 | 能力 | 项目 | 许可证 |
 | --- | --- | --- |
+| 提示注入 / 越狱签名 | [Vigil](https://github.com/deadbits/vigil-llm) YARA + [yara-python](https://github.com/VirusTotal/yara-python) | Apache-2.0 / BSD |
+| 文本修复 | [ftfy](https://github.com/rspeer/python-ftfy) | MIT |
+| 同形字 / 混脚本 | [confusable-homoglyphs](https://pypi.org/project/confusable-homoglyphs/)（Unicode TR39） | MIT |
+| HTML 隐藏注释 | [Beautiful Soup](https://www.crummy.com/software/BeautifulSoup/) + lxml | MIT |
+| SPARQL / JSON-LD / RDF | [rdflib](https://rdflib.readthedocs.io) | BSD |
+| 高熵/密钥载荷 | [detect-secrets](https://github.com/Yelp/detect-secrets) | Apache-2.0 |
 | API | FastAPI | MIT |
 | 校验 | Pydantic v2 | MIT |
 | 持久化 | SQLAlchemy + SQLite | MIT |
-| 规范化 | Python unicodedata（无外部 NLP 强制依赖） | — |
 
-检测器默认是**确定性规则 + 结构分析**，可在生产中把 Stage 1 换成或叠上分类模型，但 PEP 与通道策略保持不变。
+可选：生产可再叠 [LLM Guard](https://github.com/protectai/llm-guard) 的 `PromptInjection` 分类器（需 transformers/ONNX），本仓库默认不用 GPU 模型。
 
 ## 快速开始
 
