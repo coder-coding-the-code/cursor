@@ -48,11 +48,16 @@ def overview(db: Session = Depends(get_db)) -> dict:
     promotions = db.query(m.Promotion).all()
     blocked = sum(1 for p in promotions if not p.allowed)
     prod = [v for v in versions if v.status == "production"]
-    latest_by_agent: dict[str, m.EvalRun] = {}
-    for run in sorted(runs, key=lambda r: r.created_at.timestamp() if r.created_at else 0, reverse=True):
-        ver = db.get(m.AgentVersion, run.version_id)
-        if ver and ver.agent_id not in latest_by_agent:
-            latest_by_agent[ver.agent_id] = run
+    prod_overalls: list[float] = []
+    for ver in prod:
+        run = (
+            db.query(m.EvalRun)
+            .filter(m.EvalRun.version_id == ver.id)
+            .order_by(m.EvalRun.created_at.desc())
+            .first()
+        )
+        if run:
+            prod_overalls.append(run.overall)
     return {
         "product": "Guardian Quality",
         "tagline": "评测 · 发布门禁 · 线上漂移",
@@ -71,10 +76,7 @@ def overview(db: Session = Depends(get_db)) -> dict:
             "production_versions": len(prod),
             "blocked_promotions": blocked,
             "open_drift_alerts": len(alerts),
-            "avg_latest_overall": round(
-                sum(r.overall for r in latest_by_agent.values()) / max(1, len(latest_by_agent)),
-                4,
-            ),
+            "avg_latest_overall": round(sum(prod_overalls) / max(1, len(prod_overalls)), 4),
         },
         "alerts": [
             {

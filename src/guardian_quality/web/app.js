@@ -116,7 +116,9 @@ async function fillAgentSelects() {
 function radarSvg(dims) {
   const keys = Object.keys(DIM_LABEL).filter((k) => dims[k] != null);
   if (!keys.length) return "<p class='hint'>暂无维度分数</p>";
-  const cx = 160, cy = 160, r = 110;
+  const cx = 180,
+    cy = 168,
+    r = 92;
   const pts = keys.map((k, i) => {
     const ang = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
     const val = Math.max(0, Math.min(1, dims[k]));
@@ -133,15 +135,22 @@ function radarSvg(dims) {
       return `<polygon points="${ring}" fill="none" stroke="#243044"/>`;
     })
     .join("");
+  const spokes = keys
+    .map((_, i) => {
+      const ang = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
+      return `<line x1="${cx}" y1="${cy}" x2="${cx + Math.cos(ang) * r}" y2="${cy + Math.sin(ang) * r}" stroke="#243044"/>`;
+    })
+    .join("");
   const labels = keys
     .map((k, i) => {
       const ang = (Math.PI * 2 * i) / keys.length - Math.PI / 2;
-      const x = cx + Math.cos(ang) * (r + 22);
-      const y = cy + Math.sin(ang) * (r + 22);
-      return `<text x="${x}" y="${y}" fill="#8ea0b8" font-size="11" text-anchor="middle">${DIM_LABEL[k]}</text>`;
+      const x = cx + Math.cos(ang) * (r + 28);
+      const y = cy + Math.sin(ang) * (r + 28) + 4;
+      const anchor = Math.abs(Math.cos(ang)) < 0.35 ? "middle" : Math.cos(ang) > 0 ? "start" : "end";
+      return `<text x="${x}" y="${y}" fill="#8ea0b8" font-size="11" text-anchor="${anchor}">${DIM_LABEL[k]}</text>`;
     })
     .join("");
-  return `<svg class="radar" viewBox="0 0 320 320">${grid}<polygon points="${pts.map((p) => p.join(",")).join(" ")}" fill="rgba(240,195,106,0.25)" stroke="#f0c36a"/></svg>${labels ? `<svg class="radar" viewBox="0 0 320 320" style="margin-top:-320px;display:block">${labels}</svg>` : ""}`;
+  return `<svg class="radar" viewBox="0 0 360 336">${grid}${spokes}<polygon points="${pts.map((p) => p.join(",")).join(" ")}" fill="rgba(240,195,106,0.25)" stroke="#f0c36a"/>${labels}</svg>`;
 }
 
 async function loadScorecard() {
