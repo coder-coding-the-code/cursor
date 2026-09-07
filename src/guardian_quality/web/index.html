@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ECS Guardian Quality · Agent 质量保障</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">GQ</div>
+      <div>
+        <strong>Guardian Quality</strong>
+        <span>Agent 质量保障</span>
+      </div>
+    </div>
+    <nav>
+      <button data-view="overview" class="active">态势总览</button>
+      <button data-view="scorecard">质量评分卡</button>
+      <button data-view="suites">评测套件</button>
+      <button data-view="runs">评测运行</button>
+      <button data-view="gates">发布门禁</button>
+      <button data-view="traces">线上轨迹</button>
+      <button data-view="audit">审计账本</button>
+    </nav>
+    <p class="footnote">ECS Security · Agent QA<br/>评测 / 门禁 / 漂移 · 星河智造</p>
+  </aside>
+  <main>
+    <header class="top">
+      <h1 id="title">态势总览</h1>
+      <div class="top-actions">
+        <span id="clock"></span>
+        <button id="reseed">重置示例数据</button>
+      </div>
+    </header>
+
+    <section id="view-overview" class="view">
+      <div class="cards" id="overview-cards"></div>
+      <div class="grid-2">
+        <article class="panel">
+          <h2>质量姿态</h2>
+          <div id="posture"></div>
+        </article>
+        <article class="panel">
+          <h2>漂移告警</h2>
+          <div id="alert-list">暂无告警</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-scorecard" class="view hidden">
+      <div class="toolbar">
+        <label>Agent
+          <select id="score-agent"></select>
+        </label>
+      </div>
+      <div class="grid-2">
+        <article class="panel">
+          <h2>维度雷达（最新一次运行）</h2>
+          <div id="radar-wrap"></div>
+        </article>
+        <article class="panel">
+          <h2>版本对照</h2>
+          <div id="version-cards"></div>
+        </article>
+      </div>
+    </section>
+
+    <section id="view-suites" class="view hidden">
+      <article class="panel">
+        <h2>套件</h2>
+        <table>
+          <thead><tr><th>名称</th><th>Agent</th><th>用例</th><th>类型</th></tr></thead>
+          <tbody id="suite-table"></tbody>
+        </table>
+      </article>
+      <article class="panel">
+        <h2>用例明细</h2>
+        <pre class="detail" id="suite-detail">选择套件查看用例</pre>
+      </article>
+    </section>
+
+    <section id="view-runs" class="view hidden">
+      <form id="run-form" class="form">
+        <label>套件
+          <select name="suite_id" id="run-suite"></select>
+        </label>
+        <label>版本
+          <select name="version_id" id="run-version"></select>
+        </label>
+        <button type="submit">运行评测</button>
+      </form>
+      <article class="panel">
+        <h2>历史运行</h2>
+        <table>
+          <thead><tr><th>时间</th><th>套件</th><th>版本</th><th>总分</th><th>结果</th></tr></thead>
+          <tbody id="run-table"></tbody>
+        </table>
+      </article>
+      <pre class="detail" id="run-detail">点击一行查看用例得分</pre>
+    </section>
+
+    <section id="view-gates" class="view hidden">
+      <form id="promo-form" class="form">
+        <label>门禁
+          <select id="gate-select"></select>
+        </label>
+        <label>候选版本
+          <select id="promo-version"></select>
+        </label>
+        <button type="submit">申请晋级生产</button>
+      </form>
+      <article class="panel">
+        <h2>门禁策略</h2>
+        <div id="gate-list"></div>
+      </article>
+      <article class="panel">
+        <h2>晋级记录</h2>
+        <table>
+          <thead><tr><th>版本</th><th>门禁</th><th>结果</th><th>原因</th></tr></thead>
+          <tbody id="promo-table"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section id="view-traces" class="view hidden">
+      <article class="panel">
+        <h2>生产轨迹打分</h2>
+        <table>
+          <thead><tr><th>轨迹</th><th>Agent</th><th>输入</th><th>总分</th><th>通过</th></tr></thead>
+          <tbody id="trace-table"></tbody>
+        </table>
+      </article>
+      <article class="panel">
+        <h2>相对生产基线的漂移</h2>
+        <table>
+          <thead><tr><th>Agent</th><th>维度</th><th>基线</th><th>当前</th><th>Δ</th><th>级别</th></tr></thead>
+          <tbody id="drift-table"></tbody>
+        </table>
+      </article>
+    </section>
+
+    <section id="view-audit" class="view hidden">
+      <article class="panel">
+        <table>
+          <thead><tr><th>ID</th><th>动作</th><th>详情</th></tr></thead>
+          <tbody id="audit-table"></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
